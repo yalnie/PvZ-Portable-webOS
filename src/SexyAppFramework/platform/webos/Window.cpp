@@ -43,7 +43,8 @@
 #define SDL_HINT_WEBOS_ACCESS_POLICY_KEYS_BACK "SDL_HINT_WEBOS_ACCESS_POLICY_KEYS_BACK"
 #endif
 
-using namespace Sexy;
+namespace Sexy
+{
 
 std::string GetWebOSAppDir()
 {
@@ -57,6 +58,13 @@ std::string GetWebOSAppDir()
 	if (slash == std::string::npos)
 		return ".";
 	return exePath.substr(0, slash);
+}
+
+} // namespace Sexy
+
+std::string GetWebOSAppDir()
+{
+	return Sexy::GetWebOSAppDir();
 }
 
 void SexyAppBase::MakeWindow()
