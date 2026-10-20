@@ -60,13 +60,6 @@ std::string GetWebOSAppDir()
 	return exePath.substr(0, slash);
 }
 
-} // namespace Sexy
-
-std::string GetWebOSAppDir()
-{
-	return Sexy::GetWebOSAppDir();
-}
-
 void SexyAppBase::MakeWindow()
 {
 	if (mWindow)
@@ -148,3 +141,11 @@ void SexyAppBase::MakeWindow()
 	mGLInterface->UpdateViewport();
 	mWidgetManager->Resize(mScreenBounds, mGLInterface->mPresentationRect);
 }
+
+} // namespace Sexy
+
+std::string GetWebOSAppDir()
+{
+	return Sexy::GetWebOSAppDir();
+}
+
