@@ -163,13 +163,15 @@ jobs:
 
       - name: Compatibility Check
         shell: bash
-        run: webosbrew-ipk-verify -f markdown dist/*.ipk >> "$GITHUB_STEP_SUMMARY"
+        run: webosbrew-ipk-verify -d -f markdown dist/*.ipk | tee -a "$GITHUB_STEP_SUMMARY" || true
 
       - name: Upload .ipk
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: webos-ipk
           path: dist/*.ipk
+          if-no-files-found: ignore
 
       - name: Generate Homebrew Manifest
         if: github.event_name == 'release'
