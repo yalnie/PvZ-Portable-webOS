@@ -4,6 +4,27 @@ project(pvz-portable LANGUAGES C CXX)
 
 include(CMake/ProjectVersion.cmake)
 
+option(WEBOS "Build for webOS TV (SDL2 + GLES2)" OFF)
+if(NOT WEBOS AND
+	(CMAKE_CXX_COMPILER_TARGET MATCHES "arm-webos-linux-gnueabi" OR
+	 CMAKE_SYSROOT MATCHES "webos"))
+	message(STATUS "webOS buildroot toolchain detected -- auto-enabling WEBOS")
+	set(WEBOS ON)
+endif()
+if(WEBOS)
+	add_compile_definitions(WEBOS=1 __WEBOS__=1)
+endif()
+
+if(NOT PVZP_APP_VERSION)
+	if(PVZP_VERSION_PLAIN MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+		set(PVZP_APP_VERSION "${PVZP_VERSION_PLAIN}")
+	elseif(PVZP_VERSION_PLAIN MATCHES "^[0-9]+\\.[0-9]+$")
+		set(PVZP_APP_VERSION "${PVZP_VERSION_PLAIN}.0")
+	else()
+		set(PVZP_APP_VERSION "1.0.0")
+	endif()
+endif()
+
 option(BUILD_STATIC "Statically link dependencies for a standalone exe (Windows MinGW, Linux)" OFF)
 if(BUILD_STATIC)
 	if(WIN32 AND NOT MSVC)
@@ -72,6 +93,17 @@ elseif(EMSCRIPTEN)
 	list(APPEND PLAT_INCLUDES
 		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/emscripten
 	)
+elseif(WEBOS)
+	find_library(OPENMPT_LIBRARY NAMES openmpt libopenmpt REQUIRED)
+	set(OPENMPT_LIB ${OPENMPT_LIBRARY})
+
+	list(APPEND SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/webos/Window.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/webos/Input.cpp
+	)
+	list(APPEND PLAT_INCLUDES
+		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/webos
+	)
 else()
 	if(VCPKG_TOOLCHAIN)
 		find_package(libopenmpt CONFIG REQUIRED)
@@ -128,6 +160,22 @@ if(EMSCRIPTEN)
 	list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -fexceptions")
+elseif(WEBOS)
+	list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake")
+	find_package(Threads REQUIRED)
+	find_package(ZLIB REQUIRED)
+	find_package(JPEG REQUIRED)
+	find_package(PNG REQUIRED)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+	if(NOT TARGET SDL2::SDL2)
+		add_library(SDL2::SDL2 ALIAS PkgConfig::SDL2)
+	endif()
+	if(NOT TARGET SDL2::SDL2main)
+		add_library(SDL2main_webos_iface INTERFACE)
+		add_library(SDL2::SDL2main ALIAS SDL2main_webos_iface)
+	endif()
+	set(SDL2_LINK_TARGET SDL2::SDL2)
 else()
 	find_package(Threads REQUIRED)
 	find_package(ZLIB REQUIRED)
@@ -279,6 +327,28 @@ elseif (NINTENDO_SWITCH)
 		NACP pvz-portable.nacp
 		ICON ${CMAKE_CURRENT_SOURCE_DIR}/icon-switch.jpg
 	)
+elseif (WEBOS)
+	target_link_options(pvz-portable PRIVATE -static-libstdc++ -static-libgcc)
+	target_link_libraries(pvz-portable PRIVATE ${CMAKE_DL_LIBS})
+
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/webos/appinfo.json.in
+		${CMAKE_CURRENT_BINARY_DIR}/webos-appinfo/appinfo.json @ONLY)
+
+	install(TARGETS pvz-portable RUNTIME DESTINATION . COMPONENT pvzportable)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/webos-appinfo/appinfo.json
+		DESTINATION . COMPONENT pvzportable)
+	install(FILES
+		${CMAKE_CURRENT_SOURCE_DIR}/webos/icon80.png
+		${CMAKE_CURRENT_SOURCE_DIR}/webos/icon115.png
+		${CMAKE_CURRENT_SOURCE_DIR}/webos/icon130.png
+		${CMAKE_CURRENT_SOURCE_DIR}/webos/icon192.png
+		DESTINATION . COMPONENT pvzportable)
+	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.pak")
+		install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/main.pak DESTINATION . COMPONENT pvzportable)
+	endif()
+	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/properties")
+		install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/properties" DESTINATION . COMPONENT pvzportable)
+	endif()
 elseif (ANDROID)
 	target_link_libraries(pvz-portable PRIVATE GLESv2 EGL android log)
 	set_target_properties(pvz-portable PROPERTIES OUTPUT_NAME "main")

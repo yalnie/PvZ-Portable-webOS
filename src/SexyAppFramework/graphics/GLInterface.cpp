@@ -1183,6 +1183,9 @@ void GLInterface::UpdateViewport()
 
 #ifdef __SWITCH__
 	int width = 1280, height = 720;
+#elif defined(WEBOS) || defined(__WEBOS__)
+	int width = 1920, height = 1080;
+	SDL_GetWindowSize((SDL_Window*)mApp->mWindow, &width, &height);
 #else
 	int width, height;
 	SDL_GL_GetDrawableSize((SDL_Window*)mApp->mWindow, &width, &height);

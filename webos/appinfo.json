@@ -1,0 +1,16 @@
+{
+    "id": "io.github.wszqkzqk.pvzportable",
+    "version": "1.0.0",
+    "vendor": "wszqkzqk",
+    "type": "native",
+    "main": "pvz-portable",
+    "title": "PvZ Portable",
+    "appDescription": "Plants vs. Zombies: Game of the Year Edition reimplementation for webOS",
+    "icon": "icon80.png",
+    "mediumLargeIcon": "icon115.png",
+    "largeIcon": "icon130.png",
+    "extraLargeIcon": "icon192.png",
+    "iconColor": "#FFFFFF",
+    "bgColor": "#000000",
+    "supportTouchMode": "full"
+}

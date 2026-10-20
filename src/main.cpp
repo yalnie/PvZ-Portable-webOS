@@ -84,6 +84,11 @@ static void BuildUtf8ArgsFromWin32(int& argc, char**& argv)
 
 int main(int argc, char** argv)
 {
+#if defined(WEBOS) || defined(__WEBOS__)
+	setvbuf(stdout, nullptr, _IONBF, 0);
+	setvbuf(stderr, nullptr, _IONBF, 0);
+#endif
+
 #ifdef __SWITCH__
 	consoleDebugInit(debugDevice_SVC);
 #endif

@@ -176,6 +176,9 @@ SexyAppBase::SexyAppBase()
 
 #ifdef __SWITCH__
 	mResourceDir = "sdmc:/switch/PvZPortable/";
+#elif defined(WEBOS) || defined(__WEBOS__)
+	extern std::string GetWebOSAppDir();
+	mResourceDir = GetWebOSAppDir() + "/";
 #elif defined(__ANDROID__) && !defined(__TERMUX__)
 	const char* aExtPath = SDL_AndroidGetExternalStoragePath();
 	if (aExtPath)
@@ -3388,7 +3391,13 @@ void SexyAppBase::Init()
 
 	InitPropertiesHook();
 
-#if defined(__ANDROID__) && !defined(__TERMUX__)
+#if defined(WEBOS) || defined(__WEBOS__)
+	{
+		SetAppDataFolder(GetResourcePath("savedata/"));
+		std::error_code aEc;
+		std::filesystem::create_directories(PathFromU8(Sexy::GetAppDataFolder()), aEc);
+	}
+#elif defined(__ANDROID__) && !defined(__TERMUX__)
 	{
 		const char* aExtPath = SDL_AndroidGetExternalStoragePath();
 		if (aExtPath)

@@ -1,0 +1,206 @@
+name: Build webOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'src/**'
+      - 'webos/**'
+      - 'tools/webos/**'
+      - 'CMakeLists.txt'
+      - 'CMake/**'
+      - '.github/workflows/webos.yml'
+  release:
+    types: [published]
+
+env:
+  WEBOS_SDK: /opt/arm-webos-linux-gnueabi_sdk-buildroot
+
+jobs:
+  build-webos:
+    name: Build (webOS)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install Build Tools
+        run: sudo apt-get -yq update && sudo apt-get -y -qq install cmake ninja-build pkg-config jq
+
+      - name: Download webOS NDK
+        uses: robinraju/release-downloader@v1.9
+        with:
+          repository: "openlgtv/buildroot-nc4"
+          latest: true
+          fileName: "arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz"
+          out-file-path: "/tmp"
+
+      - name: Extract + Relocate webOS NDK
+        shell: bash
+        run: |
+          sudo mkdir -p "$(dirname "$WEBOS_SDK")"
+          sudo tar xzf /tmp/arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz -C "$(dirname "$WEBOS_SDK")"
+          sudo "$WEBOS_SDK/relocate-sdk.sh"
+
+      - name: Download ares-cli-rs (ares-package)
+        uses: robinraju/release-downloader@v1.9
+        with:
+          repository: "webosbrew/ares-cli-rs"
+          latest: true
+          fileName: "ares-package_*_amd64.deb"
+          out-file-path: "temp"
+
+      - name: Download Homebrew Toolbox (webosbrew-ipk-verify)
+        uses: robinraju/release-downloader@v1.9
+        with:
+          repository: "webosbrew/dev-toolbox-cli"
+          latest: true
+          fileName: "webosbrew-toolbox-*_amd64.deb"
+          out-file-path: "temp"
+
+      - name: Install webOS Packaging Tools
+        run: sudo apt-get install -y ./temp/*.deb
+
+      - name: Resolve libopenmpt Version
+        shell: bash
+        run: |
+          OPENMPT_TAG=$(git ls-remote --tags https://github.com/OpenMPT/openmpt.git 'refs/tags/libopenmpt-*' \
+            | sed 's|.*refs/tags/libopenmpt-||' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+          if [ -z "$OPENMPT_TAG" ]; then
+            OPENMPT_TAG="0.8.4"
+          fi
+          echo "OPENMPT_TAG=$OPENMPT_TAG" >> "$GITHUB_ENV"
+          echo "Using libopenmpt $OPENMPT_TAG"
+
+      - name: Restore libopenmpt Cache
+        id: openmpt-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/openmpt-webos-install
+          key: openmpt-webos-${{ env.OPENMPT_TAG }}
+
+      - name: Build libopenmpt (static)
+        if: steps.openmpt-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          git clone --depth=1 --branch "libopenmpt-${OPENMPT_TAG}" https://github.com/OpenMPT/openmpt.git /tmp/libopenmpt-src
+          cd /tmp/libopenmpt-src
+          make CONFIG=gcc \
+            CC="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-gcc" \
+            CXX="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-g++" \
+            AR="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-ar" \
+            RANLIB="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-ranlib" \
+            STATIC_LIB=1 SHARED_LIB=0 \
+            EXAMPLES=0 OPENMPT123=0 TEST=0 \
+            NO_ZLIB=1 NO_MPG123=1 NO_OGG=1 NO_VORBIS=1 NO_VORBISFILE=1 \
+            NO_PORTAUDIO=1 NO_PORTAUDIOCPP=1 NO_PULSEAUDIO=1 \
+            NO_SDL2=1 NO_FLAC=1 NO_SNDFILE=1 \
+            -j$(nproc)
+          mkdir -p /tmp/openmpt-webos-install
+          make CONFIG=gcc \
+            CC="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-gcc" \
+            CXX="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-g++" \
+            AR="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-ar" \
+            RANLIB="$WEBOS_SDK/bin/arm-webos-linux-gnueabi-ranlib" \
+            STATIC_LIB=1 SHARED_LIB=0 \
+            EXAMPLES=0 OPENMPT123=0 TEST=0 \
+            PREFIX="/tmp/openmpt-webos-install" install
+
+      - name: Save libopenmpt Cache
+        if: steps.openmpt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/openmpt-webos-install
+          key: openmpt-webos-${{ env.OPENMPT_TAG }}
+
+      - name: Install libopenmpt into SDK Sysroot
+        shell: bash
+        run: |
+          sudo cp -r /tmp/openmpt-webos-install/* "$WEBOS_SDK/arm-webos-linux-gnueabi/sysroot/usr/"
+
+      - name: Derive Release Version (release event only)
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          TAG_CLEAN="${TAG#v}"
+          MAJOR=$(echo "$TAG_CLEAN" | cut -d. -f1)
+          MINOR=$(echo "$TAG_CLEAN" | cut -d. -f2)
+          PATCH=$(echo "$TAG_CLEAN" | cut -d. -f3 | cut -d- -f1)
+          [ -z "$MAJOR" ] && MAJOR=1
+          [ -z "$MINOR" ] && MINOR=0
+          [ -z "$PATCH" ] && PATCH=0
+          APP_VERSION="$((10#$MAJOR)).$((10#$MINOR)).$((10#$PATCH))"
+          echo "tag $TAG -> PVZP_APP_VERSION $APP_VERSION"
+          echo "PVZP_APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build + Package
+        shell: bash
+        run: bash tools/webos/build.sh
+
+      - name: Verify Package Version
+        if: env.PVZP_APP_VERSION != ''
+        shell: bash
+        run: |
+          set -eo pipefail
+          IPK="$(ls dist/*.ipk | head -n1)"
+          EXPECTED="io.github.wszqkzqk.pvzportable_${PVZP_APP_VERSION}_arm.ipk"
+          if [ "$(basename "$IPK")" != "$EXPECTED" ]; then
+            echo "ERROR: expected package '$EXPECTED', got '$(basename "$IPK")'" >&2
+            exit 1
+          fi
+          echo "OK: $(basename "$IPK") carries version $PVZP_APP_VERSION"
+
+      - name: Compatibility Check
+        shell: bash
+        run: webosbrew-ipk-verify -f markdown dist/*.ipk >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload .ipk
+        uses: actions/upload-artifact@v4
+        with:
+          name: webos-ipk
+          path: dist/*.ipk
+
+      - name: Generate Homebrew Manifest
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eo pipefail
+          IPK="$(ls dist/*.ipk | head -n1)"
+          IPK_NAME="$(basename "$IPK")"
+
+          webosbrew-gen-manifest \
+            --pkgfile "$IPK" \
+            --output dist/manifest.tmp.json \
+            --icon "https://raw.githubusercontent.com/${REPO}/${TAG}/webos/icon80.png" \
+            --link "https://github.com/${REPO}" \
+            --root false
+
+          APP_ID="$(jq -r .id dist/manifest.tmp.json)"
+          jq --arg url "https://github.com/${REPO}/releases/download/${TAG}/${IPK_NAME}" \
+            '.ipkUrl = $url' dist/manifest.tmp.json > "dist/${APP_ID}.manifest.json"
+          rm dist/manifest.tmp.json
+
+          cat "dist/${APP_ID}.manifest.json"
+
+      - name: Publish Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            dist/*.ipk
+            dist/*.manifest.json
