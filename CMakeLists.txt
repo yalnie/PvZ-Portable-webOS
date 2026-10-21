@@ -342,7 +342,7 @@ elseif (NINTENDO_SWITCH)
 	)
 elseif (WEBOS)
 	target_link_options(pvz-portable PRIVATE -static-libstdc++ -static-libgcc -Wl,-rpath,\$ORIGIN)
-	target_link_libraries(pvz-portable PRIVATE ${CMAKE_DL_LIBS})
+	target_link_libraries(pvz-portable PRIVATE GLESv2 ${CMAKE_DL_LIBS})
 
 	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/webos/appinfo.json.in
 		${CMAKE_CURRENT_BINARY_DIR}/webos-appinfo/appinfo.json @ONLY)

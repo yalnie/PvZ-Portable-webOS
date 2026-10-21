@@ -80,12 +80,6 @@ void SexyAppBase::MakeWindow()
 
 	int winW = 1920;
 	int winH = 1080;
-	SDL_DisplayMode dm;
-	if (SDL_GetCurrentDisplayMode(0, &dm) == 0 && dm.w > 0 && dm.h > 0)
-	{
-		winW = dm.w;
-		winH = dm.h;
-	}
 
 	// webOS shell requires fullscreen passed directly at creation time
 	Uint32 winFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN;
@@ -97,6 +91,7 @@ void SexyAppBase::MakeWindow()
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 	WindowPtr window(SDL_CreateWindow(
 		mTitle.c_str(),

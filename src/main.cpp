@@ -82,11 +82,53 @@ static void BuildUtf8ArgsFromWin32(int& argc, char**& argv)
 }
 #endif
 
+#if defined(WEBOS) || defined(__WEBOS__)
+#include <SDL.h>
+#include <signal.h>
+#include <unistd.h>
+
+static void WebOSSignalHandler(int sig)
+{
+	const char* msg = "Unknown signal";
+	if (sig == SIGSEGV) msg = "SIGSEGV (Segmentation fault)";
+	else if (sig == SIGABRT) msg = "SIGABRT (Aborted)";
+	else if (sig == SIGBUS) msg = "SIGBUS (Bus error)";
+	else if (sig == SIGFPE) msg = "SIGFPE (Floating point exception)";
+	else if (sig == SIGILL) msg = "SIGILL (Illegal instruction)";
+
+	fprintf(stderr, "[PvZ FATAL] Crash caught by signal handler: %s (%d)\n", msg, sig);
+	FILE* f = fopen("/tmp/pvz_crash.log", "w");
+	if (f)
+	{
+		fprintf(f, "Crash signal: %s (%d)\n", msg, sig);
+		fclose(f);
+	}
+	_exit(128 + sig);
+}
+#endif
+
 int main(int argc, char** argv)
 {
 #if defined(WEBOS) || defined(__WEBOS__)
 	setvbuf(stdout, nullptr, _IONBF, 0);
 	setvbuf(stderr, nullptr, _IONBF, 0);
+
+	signal(SIGSEGV, WebOSSignalHandler);
+	signal(SIGABRT, WebOSSignalHandler);
+	signal(SIGBUS, WebOSSignalHandler);
+	signal(SIGFPE, WebOSSignalHandler);
+	signal(SIGILL, WebOSSignalHandler);
+
+	// App ID hint for Wayland / webOS LSM
+	SDL_SetHint("SDL_APP_ID", "io.github.wszqkzqk.pvzportable");
+	SDL_SetHint("SDL_HINT_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+
+	// Initialize SDL video/audio early so PmLogLib and SDL_LogMessage don't crash before window creation
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
+	{
+		fprintf(stderr, "[PvZ] SDL_Init failed: %s\n", SDL_GetError());
+	}
 #endif
 
 #ifdef __SWITCH__
