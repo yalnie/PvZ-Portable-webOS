@@ -119,6 +119,34 @@ int main(int argc, char** argv)
 	signal(SIGFPE, WebOSSignalHandler);
 	signal(SIGILL, WebOSSignalHandler);
 
+	// Auto-detect Wayland environment for SSH sessions
+	if (!getenv("XDG_RUNTIME_DIR"))
+	{
+		const char* candidates[] = {
+			"/tmp/xdg",
+			"/run/user/0",
+			"/tmp/run/0",
+			"/var/run/xdg",
+			"/run/user/5000",
+			"/tmp/run/user/0",
+			nullptr
+		};
+		for (int i = 0; candidates[i]; ++i)
+		{
+			std::string socketPath = std::string(candidates[i]) + "/wayland-0";
+			if (access(socketPath.c_str(), F_OK) == 0)
+			{
+				setenv("XDG_RUNTIME_DIR", candidates[i], 1);
+				fprintf(stderr, "[PvZ] Auto-detected XDG_RUNTIME_DIR: %s\n", candidates[i]);
+				break;
+			}
+		}
+	}
+	if (!getenv("WAYLAND_DISPLAY"))
+	{
+		setenv("WAYLAND_DISPLAY", "wayland-0", 0);
+	}
+
 	// App ID hint for Wayland / webOS LSM
 	SDL_SetHint("SDL_APP_ID", "io.github.wszqkzqk.pvzportable");
 	SDL_SetHint("SDL_HINT_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
