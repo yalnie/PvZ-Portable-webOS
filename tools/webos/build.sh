@@ -84,6 +84,11 @@ cmake --build "$BUILD_DIR" --target pvz-portable -j"$(nproc)"
 rm -rf "$APP_DIR"
 cmake --install "$BUILD_DIR" --prefix "$APP_DIR" --component pvzportable
 
+# Bundle libjpeg into app root so webOS 4+ firmwares that lack libjpeg.so.8 can load it
+if [ -f "$SYSROOT_USR/lib/libjpeg.so.8" ]; then
+    cp -P "$SYSROOT_USR"/lib/libjpeg.so* "$APP_DIR/"
+fi
+
 mkdir -p "$DIST_DIR"
 ares-package "$APP_DIR" -o "$DIST_DIR"
 

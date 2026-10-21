@@ -163,7 +163,7 @@ jobs:
 
       - name: Compatibility Check
         shell: bash
-        run: webosbrew-ipk-verify -d -f markdown dist/*.ipk | tee -a "$GITHUB_STEP_SUMMARY" || true
+        run: webosbrew-ipk-verify -d -f markdown dist/*.ipk | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload .ipk
         if: always()
