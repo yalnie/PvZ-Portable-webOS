@@ -455,3 +455,7 @@ build-*/
 
 # Game recordings
 *.dmo
+
+# Temporary diagnostic logs
+log.txt
+summary.md
