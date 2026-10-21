@@ -1215,8 +1215,11 @@ void LawnApp::Init()
 
 	fprintf(stderr, "[PvZ] LawnApp::Init: Creating TitleScreen...\n");
 	mTitleScreen = std::make_unique<TitleScreen>(this);
+	fprintf(stderr, "[PvZ] LawnApp::Init: Resizing TitleScreen...\n");
 	mTitleScreen->Resize(0, 0, mWidth, mHeight);
+	fprintf(stderr, "[PvZ] LawnApp::Init: Adding TitleScreen to WidgetManager...\n");
 	mWidgetManager->AddWidget(mTitleScreen.get());
+	fprintf(stderr, "[PvZ] LawnApp::Init: Setting focus to TitleScreen...\n");
 	mWidgetManager->SetFocus(mTitleScreen.get());
 
 #ifdef PVZ_DEBUG
@@ -1225,11 +1228,16 @@ void LawnApp::Init()
 #endif
 	mTimer.Start();
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Creating Music...\n");
 	mMusic = std::make_unique<Music>();
+	fprintf(stderr, "[PvZ] LawnApp::Init: Creating Foley...\n");
 	mSoundSystem = std::make_unique<PvzpFoley>();
+	fprintf(stderr, "[PvZ] LawnApp::Init: Creating EffectSystem...\n");
 	mEffectSystem = std::make_unique<EffectSystem>();
+	fprintf(stderr, "[PvZ] LawnApp::Init: Initializing EffectSystem...\n");
 	mEffectSystem->EffectSystemInitialize();
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Creating TypingChecks...\n");
 	mKonamiCheck = std::make_unique<TypingCheck>();
 	mKonamiCheck->AddKeyCode(KeyCode::KEYCODE_UP);
 	mKonamiCheck->AddKeyCode(KeyCode::KEYCODE_UP);
@@ -1257,9 +1265,13 @@ void LawnApp::Init()
 #endif
 	mTimer.Start();
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Calling ReanimatorLoadDefinitions...\n");
 	ReanimatorLoadDefinitions(gLawnReanimationArray, ReanimationType::NUM_REANIMS);
+	fprintf(stderr, "[PvZ] LawnApp::Init: Ensuring SPROUT reanim loaded...\n");
 	ReanimatorEnsureDefinitionLoaded(ReanimationType::REANIM_LOADBAR_SPROUT, true);
+	fprintf(stderr, "[PvZ] LawnApp::Init: Ensuring ZOMBIEHEAD reanim loaded...\n");
 	ReanimatorEnsureDefinitionLoaded(ReanimationType::REANIM_LOADBAR_ZOMBIEHEAD, true);
+	fprintf(stderr, "[PvZ] LawnApp::Init: Finished successfully!\n");
 
 #ifdef PVZ_DEBUG
 	aDuration = mTimer.GetDuration();
@@ -1275,8 +1287,12 @@ bool LawnApp::ChangeDirHook(const char* /*theIntendedPath*/)
 
 void LawnApp::Start()
 {
+	fprintf(stderr, "[PvZ] LawnApp::Start: Entered\n");
 	if (mLoadingFailed)
+	{
+		fprintf(stderr, "[PvZ] LawnApp::Start: mLoadingFailed is true, returning\n");
 		return;
+	}
 
 	SexyAppBase::Start();
 }

@@ -45,9 +45,10 @@ ReanimAtlasImage* ReanimAtlas::GetEncodedReanimAtlas(Image* theImage)
 
 MemoryImage* ReanimAtlasMakeBlankMemoryImage(int theWidth, int theHeight)
 {
+	int aBitsCount = theWidth * theHeight;
+	fprintf(stderr, "[PvZ] ReanimAtlasMakeBlankMemoryImage: %d x %d (bits: %d)\n", theWidth, theHeight, aBitsCount);
 	MemoryImage* aImage = new MemoryImage();
 
-	int aBitsCount = theWidth * theHeight;
 	aImage->mBits = std::make_unique<uint32_t[]>(aBitsCount + 1);
 	aImage->mWidth = theWidth;
 	aImage->mHeight = theHeight;

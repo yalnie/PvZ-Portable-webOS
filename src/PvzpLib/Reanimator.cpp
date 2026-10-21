@@ -1180,6 +1180,7 @@ void ReanimatorEnsureDefinitionLoaded(ReanimationType theReanimType, bool theIsP
 	if (aReanimDef->mTracks.tracks != nullptr)  // non-null tracks means the definition is already loaded
 		return;
 	const ReanimationParams* aReanimParams = &gReanimationParamArray[theReanimType];
+	fprintf(stderr, "[PvZ] ReanimatorEnsureDefinitionLoaded: '%s' (type %d)\n", aReanimParams->mReanimFileName, (int)theReanimType);
 	PvzpLogLn("'{}'", aReanimParams->mReanimFileName);
 	if (theIsPreloading)
 	{

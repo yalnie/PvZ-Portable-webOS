@@ -2969,6 +2969,7 @@ void SexyAppBase::LogPerfStats()
 
 void SexyAppBase::Start()
 {
+	fprintf(stderr, "[PvZ] SexyAppBase::Start: Entered\n");
 	if (mShutdown)
 		return;
 
@@ -2985,7 +2986,9 @@ void SexyAppBase::Start()
 	mLastUserInputTick = aStartTime;
 	mLastTimerTime = aStartTime;
 
+	fprintf(stderr, "[PvZ] SexyAppBase::Start: Entering DoMainLoop...\n");
 	DoMainLoop();
+	fprintf(stderr, "[PvZ] SexyAppBase::Start: Exited DoMainLoop\n");
 #ifndef __EMSCRIPTEN__
 	ProcessSafeDeleteList();
 

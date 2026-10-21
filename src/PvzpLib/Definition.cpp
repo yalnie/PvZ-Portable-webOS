@@ -323,7 +323,21 @@ unsigned int DefinitionGetSize(const DefMap* theDefMap, void* theDefinition) {
 
 void* DefinitionAlloc(int theSize)
 {
-	void* aPtr = operator new[](theSize);
+	if (theSize < 0)
+	{
+		fprintf(stderr, "[PvZ FATAL] DefinitionAlloc called with negative size: %d\n", theSize);
+		return nullptr;
+	}
+	void* aPtr = nullptr;
+	try
+	{
+		aPtr = operator new[](theSize);
+	}
+	catch (const std::bad_alloc& e)
+	{
+		fprintf(stderr, "[PvZ FATAL] DefinitionAlloc: std::bad_alloc for size %d\n", theSize);
+		throw;
+	}
 	PVZP_ASSERT(aPtr);
 	memset(aPtr, 0, theSize);
 	return aPtr;
@@ -1289,6 +1303,7 @@ bool DefinitionCompileFile(const std::string& theXMLFilePath, const std::string&
 
 bool DefinitionCompileAndLoad(const std::string& theXMLFilePath, const DefMap* theDefMap, void* theDefinition)
 {
+	fprintf(stderr, "[PvZ] DefinitionCompileAndLoad: '%s'\n", theXMLFilePath.c_str());
 #ifdef PVZ_DEBUG
 	const bool aRequireCompiledUpToDate = true;
 #else
