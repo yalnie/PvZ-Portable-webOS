@@ -80,13 +80,18 @@ std::string PakInterface::NormalizePakPath(std::string_view theFileName)
 
 bool PakInterface::AddPakFile(const std::string& theFileName)
 {
+	fprintf(stderr, "[PvZ] PakInterface::AddPakFile: %s\n", theFileName.c_str());
 	FILE *aFileHandle = fcaseopen(theFileName.c_str(), "rb");
 	if (!aFileHandle)
+	{
+		fprintf(stderr, "[PvZ ERROR] Failed to open pak file: %s\n", theFileName.c_str());
 		return false;
+	}
 
 	fseek(aFileHandle, 0, SEEK_END);
 	size_t aFileSize = ftell(aFileHandle);
 	fseek(aFileHandle, 0, SEEK_SET);
+	fprintf(stderr, "[PvZ] PakInterface: pak file size = %zu bytes\n", aFileSize);
 
 #ifdef LOW_MEMORY
 	mPakCollectionList.emplace_back(aFileHandle);

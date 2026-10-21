@@ -1159,10 +1159,14 @@ void LawnApp::Init()
 	mBoardResult = BoardResult::BOARDRESULT_NONE;
 	mSawYeti = false;
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Calling SexyApp::Init()...\n");
 	SexyApp::Init();
 
 	if (mShutdown) // MakeWindow() failed
+	{
+		fprintf(stderr, "[PvZ] LawnApp::Init: Shutdown requested (MakeWindow failed)\n");
 		return;
+	}
 
 	if (mRecordingDemoBuffer || mPlayingDemoBuffer)
 		mAppRandSeed = mRandSeed; // demo sessions derive the app-level seed from the recorded one
@@ -1174,20 +1178,25 @@ void LawnApp::Init()
 #endif
 	PvzpLogLn("session id: {}", static_cast<long long>(mSessionID));
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Parsing resources.xml...\n");
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
 	{
+		fprintf(stderr, "[PvZ ERROR] Failed to parse properties/resources.xml\n");
 		ShowResourceError(true);
 		return;
 	}
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Loading Init resource group...\n");
 	if (!PvzpLoadResources("Init"))
 	{
+		fprintf(stderr, "[PvZ ERROR] Failed to load Init resource group\n");
 		return;
 	}
 
 	PerfTimer mTimer;
 	mTimer.Start();
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Loading profile manager...\n");
 	mProfileMgr->Load();
 
 	std::string aCurUser;
@@ -1204,6 +1213,7 @@ void LawnApp::Init()
 	mMaxPlays = GetInteger("MaxPlays", 0);
 	mMaxTime = GetInteger("MaxTime", 60);
 
+	fprintf(stderr, "[PvZ] LawnApp::Init: Creating TitleScreen...\n");
 	mTitleScreen = std::make_unique<TitleScreen>(this);
 	mTitleScreen->Resize(0, 0, mWidth, mHeight);
 	mWidgetManager->AddWidget(mTitleScreen.get());
@@ -1634,13 +1644,18 @@ void LawnApp::LoadGroup(const char* theGroupName, int theGroupAveMsToLoad)
 
 void LawnApp::LoadingThreadProc()
 {
+	fprintf(stderr, "[PvZ] LoadingThread: PvzpLoadResources('LoaderBar')...\n");
 	if (!PvzpLoadResources("LoaderBar"))
+	{
+		fprintf(stderr, "[PvZ ERROR] Failed to load LoaderBar resources\n");
 		return;
+	}
 
+	fprintf(stderr, "[PvZ] LoadingThread: Loading string lists...\n");
 	PvzpStringListLoad("Properties/LawnStrings.txt");
 	PvzpStringListReadFile("Properties/ZombatarTOS.txt");
 
-	// Load localized properties AFTER LawnStrings so they can override string values
+	fprintf(stderr, "[PvZ] LoadingThread: Loading localized properties...\n");
 	LoadProperties("properties/default.xml", false, false);
 	LoadProperties("properties/Layout.xml", false, false);
 	LoadProperties("properties/pvz-portable.xml", false, false);
@@ -1665,7 +1680,9 @@ void LawnApp::LoadingThreadProc()
 
 	PvzpHesitationBracket aHesitationResources("Resources");
 
+	fprintf(stderr, "[PvZ] LoadingThread: Loading LoadingImages...\n");
 	LoadGroup("LoadingImages", 9);
+	fprintf(stderr, "[PvZ] LoadingThread: Loading LoadingFonts...\n");
 	LoadGroup("LoadingFonts", 54);
 	if (mLoadingFailed || mShutdown || mCloseRequest)
 		return;

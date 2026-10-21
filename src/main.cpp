@@ -169,14 +169,38 @@ int main(int argc, char** argv)
 
 	PvzpStringListSetColors(gLawnStringFormats, gLawnStringFormatCount);
 	gExtractResourcesByName = Sexy::ExtractResourcesByName;
-	gLawnApp = new LawnApp();
-	gLawnApp->SetArgs(argc, argv);
-	gLawnApp->Init();
-	gLawnApp->Start();
+
+	try
+	{
+		fprintf(stderr, "[PvZ] Creating LawnApp instance...\n");
+		gLawnApp = new LawnApp();
+		gLawnApp->SetArgs(argc, argv);
+		fprintf(stderr, "[PvZ] Initializing LawnApp...\n");
+		gLawnApp->Init();
+		fprintf(stderr, "[PvZ] Starting LawnApp...\n");
+		gLawnApp->Start();
 #ifndef __EMSCRIPTEN__
-	gLawnApp->Shutdown();
-	delete gLawnApp;
+		fprintf(stderr, "[PvZ] Shutting down LawnApp...\n");
+		gLawnApp->Shutdown();
+		delete gLawnApp;
 #endif
+	}
+	catch (const std::exception& e)
+	{
+		fprintf(stderr, "[PvZ FATAL] Exception caught in main: %s\n", e.what());
+		FILE* f = fopen("/tmp/pvz_crash.log", "w");
+		if (f)
+		{
+			fprintf(f, "Exception in main: %s\n", e.what());
+			fclose(f);
+		}
+		return 1;
+	}
+	catch (...)
+	{
+		fprintf(stderr, "[PvZ FATAL] Unknown non-std exception caught in main\n");
+		return 1;
+	}
 
 	return 0;
 };

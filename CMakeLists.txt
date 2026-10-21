@@ -12,7 +12,8 @@ if(NOT WEBOS AND
 	set(WEBOS ON)
 endif()
 if(WEBOS)
-	add_compile_definitions(WEBOS=1 __WEBOS__=1)
+	add_compile_definitions(WEBOS=1 __WEBOS__=1 LOW_MEMORY=1)
+	set(LOW_MEMORY ON)
 endif()
 
 if(NOT PVZP_APP_VERSION)

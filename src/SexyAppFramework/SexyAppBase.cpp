@@ -2314,7 +2314,26 @@ void SexyAppBase::LoadingThreadProcStub(SexyAppBase *theArg)
 {
 	SexyAppBase* aSexyApp = theArg;
 
-	aSexyApp->LoadingThreadProc();
+	try
+	{
+		aSexyApp->LoadingThreadProc();
+	}
+	catch (const std::exception& e)
+	{
+		fprintf(stderr, "[PvZ FATAL] Exception in LoadingThread: %s\n", e.what());
+		FILE* f = fopen("/tmp/pvz_crash.log", "w");
+		if (f)
+		{
+			fprintf(f, "Exception in LoadingThread: %s\n", e.what());
+			fclose(f);
+		}
+		aSexyApp->mLoadingFailed = true;
+	}
+	catch (...)
+	{
+		fprintf(stderr, "[PvZ FATAL] Unknown exception in LoadingThread\n");
+		aSexyApp->mLoadingFailed = true;
+	}
 
 	Sexy::LogInfoLn("Resource Loading Time: {}", (SDL_GetTicks() - aSexyApp->mTimeLoaded));
 
