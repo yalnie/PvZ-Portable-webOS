@@ -580,6 +580,9 @@ bool DefinitionReadCompiledFile(const std::string& theCompiledFilePath, const De
 	PerfTimer aTimer;
 	aTimer.Start();
 
+	std::vector<uint8_t> aCompressedBuffer;
+	size_t aCompressedSize = 0;
+
 	std::string aFullCompiledPath = DefinitionGetCompiledCacheFullPath(theCompiledFilePath);
 	std::ifstream aFileStream(Sexy::PathFromU8(aFullCompiledPath), std::ios::binary);
 	if (!aFileStream)
@@ -587,17 +590,41 @@ bool DefinitionReadCompiledFile(const std::string& theCompiledFilePath, const De
 		aFileStream.open(Sexy::PathFromU8(theCompiledFilePath), std::ios::binary);
 	}
 
-	if (!aFileStream) return false;
-
-	aFileStream.seekg(0, std::ios::end);
-	size_t aCompressedSize = (size_t)aFileStream.tellg();
-	aFileStream.seekg(0, std::ios::beg);
-	std::vector<uint8_t> aCompressedBuffer(aCompressedSize);
-	aFileStream.read(reinterpret_cast<char*>(aCompressedBuffer.data()), (std::streamsize)aCompressedSize);
-	bool aReadCompressedFailed = !aFileStream || (size_t)aFileStream.gcount() != aCompressedSize;
-	if (aReadCompressedFailed) {
-		PvzpLogLn("Failed to read compiled file: {}", theCompiledFilePath);
-		return false;
+	if (aFileStream)
+	{
+		aFileStream.seekg(0, std::ios::end);
+		auto aTell = aFileStream.tellg();
+		if (aTell <= 0) return false;
+		aCompressedSize = (size_t)aTell;
+		aFileStream.seekg(0, std::ios::beg);
+		aCompressedBuffer.resize(aCompressedSize);
+		aFileStream.read(reinterpret_cast<char*>(aCompressedBuffer.data()), (std::streamsize)aCompressedSize);
+		bool aReadCompressedFailed = !aFileStream || (size_t)aFileStream.gcount() != aCompressedSize;
+		if (aReadCompressedFailed) {
+			PvzpLogLn("Failed to read compiled file: {}", theCompiledFilePath);
+			return false;
+		}
+	}
+	else
+	{
+		PFILE* pFile = p_fopen(theCompiledFilePath.c_str(), "rb");
+		if (!pFile) return false;
+		p_fseek(pFile, 0, SEEK_END);
+		int aTell = p_ftell(pFile);
+		if (aTell <= 0)
+		{
+			p_fclose(pFile);
+			return false;
+		}
+		aCompressedSize = (size_t)aTell;
+		p_fseek(pFile, 0, SEEK_SET);
+		aCompressedBuffer.resize(aCompressedSize);
+		bool aReadCompressedFailed = p_fread(aCompressedBuffer.data(), sizeof(uint8_t), aCompressedSize, pFile) != aCompressedSize;
+		p_fclose(pFile);
+		if (aReadCompressedFailed) {
+			PvzpLogLn("Failed to read compiled file from pak: {}", theCompiledFilePath);
+			return false;
+		}
 	}
 
 	size_t aUncompressedSize;

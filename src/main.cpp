@@ -82,8 +82,43 @@ static void BuildUtf8ArgsFromWin32(int& argc, char**& argv)
 }
 #endif
 
+#if defined(WEBOS) || defined(__WEBOS__)
+#include <SDL.h>
+#include <unistd.h>
+
+namespace Sexy
+{
+std::string GetWebOSAppDir();
+bool WebOSHasGameResources();
+bool WebOSRunResourceServer();
+}
+#endif
+
 int main(int argc, char** argv)
 {
+#if defined(WEBOS) || defined(__WEBOS__)
+	chdir(Sexy::GetWebOSAppDir().c_str());
+
+	SDL_SetHint("SDL_APP_ID", "io.github.wszqkzqk.pvzportable");
+	SDL_SetHint("SDL_HINT_WEBOS_ACCESS_POLICY_KEYS_BACK", "true");
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+	SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
+	{
+		return 1;
+	}
+
+	if (!Sexy::WebOSHasGameResources())
+	{
+		if (!Sexy::WebOSRunResourceServer())
+		{
+			SDL_Quit();
+			return 0;
+		}
+	}
+#endif
+
 #ifdef __SWITCH__
 	consoleDebugInit(debugDevice_SVC);
 #endif

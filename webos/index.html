@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PvZ Portable</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" />
+  <style>
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #1b5e20;
+      min-height: 100vh;
+      width: 100%;
+      font-family: 'Roboto', sans-serif;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+    }
+    .container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .pvz-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .status-text {
+      font-size: 16px;
+      color: #ffcc80;
+      text-align: center;
+      white-space: pre-line;
+      margin-bottom: 24px;
+      width: 100%;
+      line-height: 1.4;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+    .help-text {
+      font-size: 13px;
+      color: #cccccc;
+      line-height: 1.4;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.15);
+      border: none;
+      border-radius: 4px;
+      outline: none;
+      user-select: none;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+    .btn:hover:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.25);
+    }
+    .btn:active:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.35);
+    }
+    .progress-box {
+      width: 100%;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .progress-track {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      width: 100%;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #81c784;
+      transition: width 0.15s ease-out;
+    }
+    .progress-label {
+      font-size: 12px;
+      color: #ffffff;
+      margin-top: 6px;
+      text-align: center;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="pvz-title">PvZ Portable</h1>
+    <div id="status_text" class="status-text">Game resources not found.&#10;Please import main.pak + properties/ to continue.</div>
+
+    <div id="progress_box" class="progress-box">
+      <div class="progress-track">
+        <div id="progress_bar" class="progress-bar"></div>
+      </div>
+      <div id="progress_label" class="progress-label"></div>
+    </div>
+
+    <div class="section-title">Import Game Resources</div>
+    <div class="help-text">Select a ZIP file or folder that contains your legally purchased copy of main.pak and the properties/ directory.</div>
+    <button id="btn_pick_zip" class="btn">Select ZIP File</button>
+    <button id="btn_pick_dir" class="btn">Select Resource Folder</button>
+
+    <input type="file" id="input_zip" accept=".zip,application/zip" style="display:none" />
+    <input type="file" id="input_dir" webkitdirectory directory multiple style="display:none" />
+  </div>
+
+  <script>
+    const statusText = document.getElementById('status_text');
+    const progressBox = document.getElementById('progress_box');
+    const progressBar = document.getElementById('progress_bar');
+    const progressLabel = document.getElementById('progress_label');
+
+    const btnPickZip = document.getElementById('btn_pick_zip');
+    const btnPickDir = document.getElementById('btn_pick_dir');
+
+    const inputZip = document.getElementById('input_zip');
+    const inputDir = document.getElementById('input_dir');
+
+    btnPickZip.onclick = () => inputZip.click();
+    btnPickDir.onclick = () => inputDir.click();
+
+    function setProgress(percent, label) {
+      progressBox.style.display = 'block';
+      progressBar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+      if (label) progressLabel.innerText = label;
+    }
+
+    function hideProgress() {
+      progressBox.style.display = 'none';
+      progressBar.style.width = '0%';
+      progressLabel.innerText = '';
+    }
+
+    function setBusy(busy) {
+      btnPickZip.disabled = busy;
+      btnPickDir.disabled = busy;
+      btnPickZip.style.opacity = busy ? '0.5' : '1';
+      btnPickDir.style.opacity = busy ? '0.5' : '1';
+    }
+
+    async function checkServerStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ready) {
+            statusText.innerText = 'Game resources installed successfully!\nStarting game on TV...';
+            statusText.style.color = '#a5d6a7';
+            setProgress(100, 'Game starting on TV...');
+            try {
+              await fetch('/api/launch', { method: 'POST' });
+            } catch (e) {
+              // Server may shut down immediately on launch
+            }
+            setTimeout(() => {
+              window.close();
+            }, 1000);
+          }
+        }
+      } catch (e) {
+        // Ignored
+      }
+    }
+
+    checkServerStatus();
+
+    // Upload raw bytes to TV
+    async function uploadSingleFile(targetPath, fileData) {
+      const res = await fetch('/api/upload?path=' + encodeURIComponent(targetPath), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        },
+        body: fileData
+      });
+      if (!res.ok) {
+        throw new Error('Upload failed for: ' + targetPath + ' (' + res.status + ')');
+      }
+      return await res.json();
+    }
+
+    // ZIP Extraction in JavaScript
+    async function parseZipEntries(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const view = new DataView(buffer);
+
+      // Find End of Central Directory (EOCD) signature 0x06054b50
+      let eocdOffset = -1;
+      for (let i = buffer.byteLength - 22; i >= Math.max(0, buffer.byteLength - 65557); --i) {
+        if (view.getUint32(i, true) === 0x06054b50) {
+          eocdOffset = i;
+          break;
+        }
+      }
+
+      const entries = [];
+
+      if (eocdOffset >= 0) {
+        const totalEntries = view.getUint16(eocdOffset + 10, true);
+        const cdOffset = view.getUint32(eocdOffset + 16, true);
+
+        let pos = cdOffset;
+        for (let i = 0; i < totalEntries && pos + 46 <= buffer.byteLength; ++i) {
+          if (view.getUint32(pos, true) !== 0x02014b50) break;
+          const method = view.getUint16(pos + 10, true);
+          const compSize = view.getUint32(pos + 20, true);
+          const uncompSize = view.getUint32(pos + 24, true);
+          const nameLen = view.getUint16(pos + 28, true);
+          const extraLen = view.getUint16(pos + 30, true);
+          const commentLen = view.getUint16(pos + 32, true);
+          const localOffset = view.getUint32(pos + 42, true);
+
+          const nameBytes = bytes.subarray(pos + 46, pos + 46 + nameLen);
+          const name = new TextDecoder('utf-8').decode(nameBytes);
+          pos += 46 + nameLen + extraLen + commentLen;
+
+          if (name.endsWith('/') || name.endsWith('\\')) continue; // directory
+
+          // Read local header to get exact data offset
+          const localNameLen = view.getUint16(localOffset + 26, true);
+          const localExtraLen = view.getUint16(localOffset + 28, true);
+          const dataOffset = localOffset + 30 + localNameLen + localExtraLen;
+          const compData = bytes.subarray(dataOffset, dataOffset + compSize);
+
+          entries.push({ name, method, compData, uncompSize });
+        }
+      } else {
+        // Fallback: parse sequentially through local file headers
+        let pos = 0;
+        while (pos + 30 <= buffer.byteLength) {
+          if (view.getUint32(pos, true) !== 0x04034b50) break;
+          const method = view.getUint16(pos + 8, true);
+          const compSize = view.getUint32(pos + 18, true);
+          const uncompSize = view.getUint32(pos + 22, true);
+          const nameLen = view.getUint16(pos + 26, true);
+          const extraLen = view.getUint16(pos + 28, true);
+          const name = new TextDecoder('utf-8').decode(bytes.subarray(pos + 30, pos + 30 + nameLen));
+          const dataOffset = pos + 30 + nameLen + extraLen;
+          pos = dataOffset + compSize;
+
+          if (name.endsWith('/') || name.endsWith('\\')) continue;
+          const compData = bytes.subarray(dataOffset, dataOffset + compSize);
+          entries.push({ name, method, compData, uncompSize });
+        }
+      }
+
+      return entries;
+    }
+
+    async function decompressEntry(entry) {
+      if (entry.method === 0) {
+        return entry.compData;
+      } else if (entry.method === 8) {
+        if (typeof DecompressionStream !== 'undefined') {
+          const ds = new DecompressionStream('deflate-raw');
+          const writer = ds.writable.getWriter();
+          writer.write(entry.compData);
+          writer.close();
+          const ab = await new Response(ds.readable).arrayBuffer();
+          return new Uint8Array(ab);
+        } else {
+          throw new Error('Your browser does not support DecompressionStream. Please use Select Resource Folder instead.');
+        }
+      } else {
+        throw new Error('Unsupported compression method in ZIP: ' + entry.method);
+      }
+    }
+
+    // Process ZIP file selection
+    inputZip.onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      inputZip.value = '';
+
+      setBusy(true);
+      statusText.innerText = 'Reading ZIP file (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB)...';
+      statusText.style.color = '#ffcc80';
+      setProgress(5, 'Parsing archive structure...');
+
+      try {
+        const ab = await file.arrayBuffer();
+        setProgress(15, 'Indexing files...');
+        const entries = await parseZipEntries(ab);
+
+        // Find main.pak
+        let mainPakEntry = null;
+        for (const entry of entries) {
+          const norm = entry.name.replace(/\\/g, '/');
+          const lower = norm.toLowerCase();
+          if (lower === 'main.pak' || lower.endsWith('/main.pak')) {
+            mainPakEntry = entry;
+            break;
+          }
+        }
+
+        if (!mainPakEntry) {
+          throw new Error('main.pak not found in ZIP!\nPlease make sure the ZIP archive contains main.pak and properties/.');
+        }
+
+        // Determine directory prefix (e.g. if files are inside "PvZ/main.pak")
+        const mainNorm = mainPakEntry.name.replace(/\\/g, '/');
+        const lastSlash = mainNorm.lastIndexOf('/');
+        const prefix = lastSlash >= 0 ? mainNorm.substring(0, lastSlash + 1) : '';
+
+        // Filter files to upload (main.pak and properties/...)
+        const filesToUpload = [];
+        for (const entry of entries) {
+          const norm = entry.name.replace(/\\/g, '/');
+          if (!norm.startsWith(prefix)) continue;
+          let rel = norm.substring(prefix.length).replace(/^\/+/, '');
+          const lower = rel.toLowerCase();
+          if (lower === 'main.pak') {
+            filesToUpload.push({ entry, rel: 'main.pak' });
+          } else if (lower.startsWith('properties/')) {
+            filesToUpload.push({ entry, rel: 'properties/' + rel.substring(11) });
+          }
+        }
+
+        if (filesToUpload.length === 0) {
+          throw new Error('No game resource files found in ZIP.');
+        }
+
+        statusText.innerText = 'Found ' + filesToUpload.length + ' game resource files.\nDecompressing and transferring to TV...';
+
+        for (let i = 0; i < filesToUpload.length; ++i) {
+          const item = filesToUpload[i];
+          const pct = Math.round((i / filesToUpload.length) * 85) + 15;
+          setProgress(pct, 'Extracting & uploading (' + (i + 1) + '/' + filesToUpload.length + '): ' + item.rel);
+
+          const uncompressed = await decompressEntry(item.entry);
+          await uploadSingleFile(item.rel, uncompressed);
+        }
+
+        setProgress(100, 'Verifying installation on TV...');
+        await checkServerStatus();
+
+      } catch (err) {
+        statusText.innerText = 'Error: ' + err.message;
+        statusText.style.color = '#ef5350';
+        hideProgress();
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    // Process Folder selection
+    async function handleSelectedFiles(files) {
+      if (!files || files.length === 0) return;
+
+      setBusy(true);
+      statusText.innerText = 'Inspecting selected files...';
+      statusText.style.color = '#ffcc80';
+      setProgress(5, 'Checking for main.pak and properties/...');
+
+      try {
+        const fileList = Array.from(files);
+
+        // Find main.pak
+        let mainPakFile = null;
+        for (const f of fileList) {
+          const norm = (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+          const lower = norm.toLowerCase();
+          if (lower === 'main.pak' || lower.endsWith('/main.pak')) {
+            mainPakFile = f;
+            break;
+          }
+        }
+
+        if (!mainPakFile) {
+          throw new Error('main.pak not found in selection!\nPlease make sure you select the folder containing main.pak and properties/.');
+        }
+
+        const mainNorm = (mainPakFile.webkitRelativePath || mainPakFile.name).replace(/\\/g, '/');
+        const lastSlash = mainNorm.lastIndexOf('/');
+        const prefix = lastSlash >= 0 ? mainNorm.substring(0, lastSlash + 1) : '';
+
+        const toUpload = [];
+        for (const f of fileList) {
+          const norm = (f.webkitRelativePath || f.name).replace(/\\/g, '/');
+          if (!norm.startsWith(prefix)) continue;
+          let rel = norm.substring(prefix.length).replace(/^\/+/, '');
+          const lower = rel.toLowerCase();
+          if (lower === 'main.pak') {
+            toUpload.push({ file: f, rel: 'main.pak' });
+          } else if (lower.startsWith('properties/')) {
+            toUpload.push({ file: f, rel: 'properties/' + rel.substring(11) });
+          }
+        }
+
+        if (toUpload.length === 0) {
+          throw new Error('No game resource files found to upload.');
+        }
+
+        statusText.innerText = 'Transferring ' + toUpload.length + ' files to TV...';
+
+        for (let i = 0; i < toUpload.length; ++i) {
+          const item = toUpload[i];
+          const pct = Math.round((i / toUpload.length) * 90) + 10;
+          setProgress(pct, 'Uploading (' + (i + 1) + '/' + toUpload.length + '): ' + item.rel);
+
+          const arrayBuffer = await item.file.arrayBuffer();
+          await uploadSingleFile(item.rel, arrayBuffer);
+        }
+
+        setProgress(100, 'Verifying installation on TV...');
+        await checkServerStatus();
+
+      } catch (err) {
+        statusText.innerText = 'Error: ' + err.message;
+        statusText.style.color = '#ef5350';
+        hideProgress();
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    inputDir.onchange = (e) => {
+      const files = e.target.files;
+      inputDir.value = '';
+      handleSelectedFiles(files);
+    };
+  </script>
+</body>
+</html>

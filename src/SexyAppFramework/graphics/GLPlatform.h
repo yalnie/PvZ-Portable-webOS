@@ -57,10 +57,29 @@
 // When true, a desktop GL compatibility context is in use and shaders
 extern bool gDesktopGLFallback;
 
+#if defined(WEBOS) || defined(__WEBOS__)
+#include <dlfcn.h>
+inline void* WebOSGetGLProc(const char* name)
+{
+	void* proc = (void*)SDL_GL_GetProcAddress(name);
+	if (!proc)
+	{
+		static void* glesLib = nullptr;
+		if (!glesLib)
+			glesLib = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_GLOBAL);
+		if (glesLib)
+			proc = dlsym(glesLib, name);
+	}
+	return proc;
+}
+#endif
+
 inline void PlatformGLInit()
 {
 #ifdef __SWITCH__
 	gladLoadGLES2((GLADloadfunc)eglGetProcAddress);
+#elif defined(WEBOS) || defined(__WEBOS__)
+	gladLoadGLES2((GLADloadfunc)WebOSGetGLProc);
 #else
 	gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress);
 #endif

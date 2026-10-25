@@ -80,6 +80,10 @@ void Sexy::DispatchLogLn(SexyLogPriority thePriority, std::string_view theText)
 	if (theText.empty())
 		return;
 
+#if defined(WEBOS) || defined(__WEBOS__)
+	if (!SDL_WasInit(0))
+		return;
+#endif
 	SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, thePriority == SexyLogPriority::Error ? SDL_LOG_PRIORITY_ERROR : SDL_LOG_PRIORITY_INFO, "%.*s", static_cast<int>(theText.size()), theText.data());
 
 	std::scoped_lock aLock(gLogFileSinkMutex);

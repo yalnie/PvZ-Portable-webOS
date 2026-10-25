@@ -91,7 +91,8 @@ Image* GetPNGImage(const std::string& theFileName)
 {
 	png_structp png_ptr;
 	png_infop info_ptr;
-	png_uint_32 width, height;
+	png_uint_32 width = 0, height = 0;
+	int bit_depth = 0, color_type = 0, interlace_type = 0, compression_type = 0, filter_type = 0;
 	PFILE *fp;
 
 	if ((fp = p_fopen(theFileName.c_str(), "rb")) == nullptr)
@@ -137,8 +138,13 @@ Image* GetPNGImage(const std::string& theFileName)
 	}
 
 	png_read_info(png_ptr, info_ptr);
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, nullptr, nullptr,
-	   nullptr, nullptr, nullptr);
+	if (png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+	   &interlace_type, &compression_type, &filter_type) == 0 || width == 0 || height == 0)
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)nullptr);
+		p_fclose(fp);
+		return nullptr;
+	}
 
 	png_set_expand(png_ptr);
 	if constexpr (std::endian::native == std::endian::big)

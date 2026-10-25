@@ -176,6 +176,9 @@ SexyAppBase::SexyAppBase()
 
 #ifdef __SWITCH__
 	mResourceDir = "sdmc:/switch/PvZPortable/";
+#elif defined(WEBOS) || defined(__WEBOS__)
+	extern std::string GetWebOSAppDir();
+	mResourceDir = GetWebOSAppDir() + "/";
 #elif defined(__ANDROID__) && !defined(__TERMUX__)
 	const char* aExtPath = SDL_AndroidGetExternalStoragePath();
 	if (aExtPath)
@@ -1935,6 +1938,8 @@ void SexyAppBase::Popup(const std::string& theString)
 		ErrorApplicationConfig c;
 		errorApplicationCreate(&c, "Fatal error", theString.c_str());
 		errorApplicationShow(&c);
+#elif defined(WEBOS) || defined(__WEBOS__)
+		Sexy::LogErrorLn("WEBOS FATAL ERROR: {}", theString);
 #elif !defined(__EMSCRIPTEN__)
 		if (std::this_thread::get_id() == mPrimaryThreadId)
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL ERROR", theString.c_str(), nullptr);
@@ -2424,6 +2429,12 @@ void SexyAppBase::ResetCustomCursorCache()
 
 void SexyAppBase::EnforceCursor()
 {
+#if defined(WEBOS) || defined(__WEBOS__)
+	// On webOS TV, custom cursors are not supported; always use the system default cursor and keep it visible
+	SDL_SetCursor(nullptr);
+	SDL_ShowCursor(SDL_ENABLE);
+	return;
+#else
 	int aCursorNum = mSEHOccured ? CURSOR_POINTER : mCursorNum;
 	if (aCursorNum < 0 || aCursorNum >= NUM_CURSORS)
 		aCursorNum = CURSOR_POINTER;
@@ -2477,6 +2488,7 @@ void SexyAppBase::EnforceCursor()
 		SDL_SetCursor(aCursor);
 
 	SDL_ShowCursor(SDL_ENABLE);
+#endif
 }
 
 void SexyAppBase::ProcessSafeDeleteList()
@@ -3212,6 +3224,12 @@ void SexyAppBase::DoParseCmdLine()
 			std::string_view aParam = mArgv[i];
 			std::string_view aValue;
 
+			// Skip parameters not starting with '-' (e.g. webOS JSON launch params)
+			if (aParam.empty() || aParam.front() != '-')
+			{
+				continue;
+			}
+
 			size_t anEqualsPos = aParam.find('=');
 			if (anEqualsPos != std::string_view::npos)
 			{
@@ -3313,8 +3331,12 @@ void SexyAppBase::HandleCmdLineParam(std::string_view theParamName, std::string_
 	}
 	else
 	{
+#if defined(WEBOS) || defined(__WEBOS__)
+		Sexy::LogInfoLn("Ignoring unrecognized command line parameter: {}", theParamName);
+#else
 		Popup(GetString("INVALID_COMMANDLINE_PARAM", "Invalid command line parameter: ").append(theParamName));
 		DoExit(1);
+#endif
 	}
 }
 
@@ -3388,7 +3410,13 @@ void SexyAppBase::Init()
 
 	InitPropertiesHook();
 
-#if defined(__ANDROID__) && !defined(__TERMUX__)
+#if defined(WEBOS) || defined(__WEBOS__)
+	{
+		SetAppDataFolder(GetResourcePath(".lgapp_user_data/"));
+		std::error_code aEc;
+		std::filesystem::create_directories(PathFromU8(Sexy::GetAppDataFolder()), aEc);
+	}
+#elif defined(__ANDROID__) && !defined(__TERMUX__)
 	{
 		const char* aExtPath = SDL_AndroidGetExternalStoragePath();
 		if (aExtPath)
@@ -3539,6 +3567,9 @@ std::string	SexyAppBase::GetClipboard()
 
 void SexyAppBase::SetCursor(int theCursorNum)
 {
+	if (mCursorNum == theCursorNum)
+		return;
+
 	mCursorNum = theCursorNum;
 	EnforceCursor();
 }
@@ -3550,6 +3581,12 @@ int SexyAppBase::GetCursor()
 
 void SexyAppBase::EnableCustomCursors(bool enabled)
 {
+#if defined(WEBOS) || defined(__WEBOS__)
+	(void)enabled;
+	mCustomCursorsEnabled = false;
+	EnforceCursor();
+	return;
+#else
 	if (mCustomCursorsEnabled == enabled)
 	{
 		EnforceCursor();
@@ -3561,6 +3598,7 @@ void SexyAppBase::EnableCustomCursors(bool enabled)
 		ResetCustomCursorCache();
 
 	EnforceCursor();
+#endif
 }
 
 Sexy::GLImage* SexyAppBase::GetImage(const std::string& theFileName, bool commitBits)

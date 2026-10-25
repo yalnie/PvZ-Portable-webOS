@@ -385,6 +385,7 @@ void ReanimationCreateAtlas(ReanimatorDefinition* theDefinition, ReanimationType
 void ReanimationPreload(ReanimationType theReanimationType)
 {
 	PVZP_ASSERT(theReanimationType >= 0 && theReanimationType < gReanimatorDefCount);
+	ReanimatorEnsureDefinitionLoaded(theReanimationType, true);
 
 	ReanimatorDefinition* aReanimDef = &gReanimatorDefArray[theReanimationType];
 	ReanimationCreateAtlas(aReanimDef, theReanimationType);
@@ -1215,6 +1216,7 @@ void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray
 	gReanimatorDefCount = theReanimationParamArraySize;
 	gReanimatorDefArray = std::make_unique<ReanimatorDefinition[]>(theReanimationParamArraySize);
 
+#ifndef LOW_MEMORY
 	for (unsigned int i = 0; i < gReanimationParamArraySize; i++)
 	{
 		const ReanimationParams* aReanimationParams = &theReanimationParamArray[i];
@@ -1222,6 +1224,7 @@ void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray
 		if (DefinitionIsCompiled(aReanimationParams->mReanimFileName))
 			ReanimatorEnsureDefinitionLoaded(aReanimationParams->mReanimationType, true);
 	}
+#endif
 }
 
 void ReanimatorFreeDefinitions()

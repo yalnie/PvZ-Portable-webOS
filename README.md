@@ -10,7 +10,7 @@ A **cross-platform** community-driven reimplementation of Plants vs. Zombies: Ga
 
 | 🌿 Authentic | 🎮 Portable | 🛠️ Open |
 | :---: | :---: | :---: |
-| Almost 100% gameplay recreation | Support for 32/64 bit systems<br>Run on Linux, Windows, macOS, Android, iOS, WebAssembly, Switch... | OpenGL ES 2.0 & SDL |
+| Almost 100% gameplay recreation | Support for 32/64 bit systems<br>Run on Linux, Windows, macOS, Android, iOS, WebAssembly, Switch, webOS... | OpenGL ES 2.0 & SDL |
 
 🌐 **No install wanted?** [Try directly in your browser!](https://wszqkzqk.github.io/PvZ-Portable/pvz-portable.html) (You still need your own game data files.)
 
@@ -62,6 +62,7 @@ This project supports the following platforms (including but not limited to):
 | iOS / iPadOS    | App Documents directory (Files app) | Works (sideload only; unsigned IPA)                                                    |
 | Web (WASM)      | Browser IndexedDB (saves); resources uploaded at runtime    | Works (requires a HTTP server) |
 | Nintendo Switch | sdmc:/switch/PvZPortable | Works on real hardware. Kenji-NX crashes on boot.                           |
+| LG webOS        | `<appDir>/` (resources), `<appDir>/savedata/` (saves) | Works on webOS TVs via Homebrew Channel / dev mode (Magic Remote + D-pad) |
 
 To play the game, you need the game data from PvZ GOTY. Place `main.pak` and the `properties/` folder next to the `pvz-portable` executable (the game will search for resources relative to the executable's directory). You can also use extracted data instead of `main.pak` if you prefer.
 
